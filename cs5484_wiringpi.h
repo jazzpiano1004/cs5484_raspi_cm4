@@ -12,9 +12,10 @@
 #define STATUS_OK 0
 #define STATUS_FAIL 1
 
-uint8_t write(uint32_t data, uint8_t addr, uint8_t csum_en);
-uint8_t read(uint32_t *data, uint8_t addr, uint8_t csum_en);
-uint8_t setpage(uint8_t page, uint8_t csum_en);
+uint8_t reg_write(uint32_t data, uint8_t addr, uint8_t csum_en);
+uint8_t reg_read(uint32_t *data, uint8_t addr, uint8_t csum_en);
+uint8_t page_select(uint8_t page, uint8_t csum_en);
+uint8_t instruction(uint8_t instruct_code, uint8_t csum_en);
 uint8_t reset(uint8_t csum_en);
 
 #endif

@@ -5,7 +5,7 @@
 
 
 
-uint8_t write(uint32_t data, uint8_t addr, uint8_t csum_en)
+uint8_t reg_write(uint32_t data, uint8_t addr, uint8_t csum_en)
 {
     uint8_t *pdata = (uint8_t *)&data;
     uint8_t buf[5];
@@ -27,7 +27,7 @@ uint8_t write(uint32_t data, uint8_t addr, uint8_t csum_en)
     return STATUS_OK;
 }
 
-uint8_t read(uint32_t *data, uint8_t addr, uint8_t csum_en)
+uint8_t reg_read(uint32_t *data, uint8_t addr, uint8_t csum_en)
 {
     uint8_t buf[5];
     uint8_t csum;
@@ -63,7 +63,7 @@ uint8_t read(uint32_t *data, uint8_t addr, uint8_t csum_en)
     }
 }
 
-uint8_t setpage(uint8_t page, uint8_t csum_en)
+uint8_t page_select(uint8_t page, uint8_t csum_en)
 {
     uint8_t buf[5];
     uint8_t csum;
@@ -80,20 +80,32 @@ uint8_t setpage(uint8_t page, uint8_t csum_en)
     return STATUS_OK;
 }
 
-uint8_t reset(uint8_t csum_en)
+uint8_t instruction(uint8_t instruct_code, uint8_t csum_en)
 {
     uint8_t buf[5];
     uint8_t csum;
-    uint8_t ctrl_code;
 
-    buf[0] = 0xC0 | ctrl_code;
+    buf[0] = 0xC0 | instruct_code;
     digitalWrite(CS_PIN, 0);
     wiringPiSPIDataRW(SPI_CHANNEL, buf, 1);  // send CMD
     if(csum_en != 0){
-	csum = 0xFF - ctrl_code;
+	csum = 0xFF - instruct_code;
         wiringPiSPIDataRW(SPI_CHANNEL, &csum, 1);  // send checksum
     }
     digitalWrite(CS_PIN, 1);
 
     return STATUS_OK;
 }
+
+uint8_t reset(uint8_t csum_en)
+{
+    return instruction(0x01, csum_en);
+}
+/*
+uint8_t start_coversion(uint8_t conversion_type, uint8_t csum_en)
+{
+    setpage(0, csum_en);
+    write(0x800000, 23, csum_en);
+
+}
+*/
