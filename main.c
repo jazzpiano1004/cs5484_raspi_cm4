@@ -21,18 +21,18 @@ int main()
     printf("Reset CS5484 : ret=%d\r\n", ret);
     delay(5000);
     
-    ret = setpage(0, 0);
+    ret = page_select(0, 0);
     printf("Setpage : ret=%d\r\n", ret);
 
     uint32_t buf;
     while(1)
     {
-	ret = write(0x500000, 0, 0);
-        ret = read(&buf, 0, 0);
+	ret = reg_write(0x500000, 0, 0);
+        ret = reg_read(&buf, 0, 0);
         printf("read : ret=%d, read data=%x\r\n", ret, buf);
         delay(100);	
-	ret = write(0x400000, 0, 0);
-        ret = read(&buf, 0, 0);
+	ret = reg_write(0x400000, 0, 0);
+        ret = reg_read(&buf, 0, 0);
         printf("read : ret=%d, read data=%x\r\n", ret, buf);
         delay(100);	
     }
