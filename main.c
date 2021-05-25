@@ -21,20 +21,20 @@ int main()
     printf("Reset CS5484 : ret=%d\r\n", ret);
     delay(5000);
     
-    ret = page_select(0, 0);
-    printf("Setpage : ret=%d\r\n", ret);
-
     uint32_t buf;
+    uint32_t i;
+    uint32_t v;
+    uint32_t p;
+
     while(1)
-    {
-	ret = reg_write(0x500000, 0, 0);
-        ret = reg_read(&buf, 0, 0);
-        printf("read : ret=%d, read data=%x\r\n", ret, buf);
-        delay(100);	
-	ret = reg_write(0x400000, 0, 0);
-        ret = reg_read(&buf, 0, 0);
-        printf("read : ret=%d, read data=%x\r\n", ret, buf);
-        delay(100);	
+    {  
+	ret = start_conversion(CONVERSION_TYPE_SINGLE, 0, 10000);
+	printf("start conversion, ret : %d\r\n", ret);
+        v = get_voltage_rms(ANALOG_INPUT_CH1, 0);
+        i = get_current_rms(ANALOG_INPUT_CH1, 0);
+        p = get_power_avg(ANALOG_INPUT_CH1, 0);
+        
+	printf("i, v, p :\t%d\t%d\t%d\r\n", i, v, p);
     }
 
 
