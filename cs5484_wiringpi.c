@@ -221,3 +221,18 @@ uint32_t get_power_avg(uint8_t input_channel, uint8_t csum_en)
 
     return p;
 }
+
+uint32_t get_pf(uint8_t input_channel, uint8_t csum_en)
+{ 
+    uint8_t addr;
+    uint32_t pf;
+
+    if(input_channel == ANALOG_INPUT_CH1)   	addr = 21;
+    else if(input_channel == ANALOG_INPUT_CH2)	addr = 25;
+    else return STATUS_FAIL;
+
+    page_select(16, csum_en);
+    reg_read(&pf, addr, csum_en);
+
+    return pf;
+}

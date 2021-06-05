@@ -32,6 +32,7 @@ uint32_t get_voltage_rms(uint8_t input_channel, uint8_t csum_en);
 uint32_t get_current_peak(uint8_t input_channel, uint8_t csum_en);
 uint32_t get_current_rms(uint8_t input_channel, uint8_t csum_en);
 uint32_t get_power_avg(uint8_t input_channel, uint8_t csum_en);
+uint32_t get_pf(uint8_t input_channel, uint8_t csum_en);
 
 
 
