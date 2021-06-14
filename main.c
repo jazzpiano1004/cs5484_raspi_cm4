@@ -11,8 +11,8 @@
 #define VOLT_FULLSCALE    438000
 #define POWER_LINE_FULLSCALE ((long long)CURRENT_FULLSCALE*VOLT_FULLSCALE/1000000)
 
-#define N_METER_DATAFIELD 5
-
+#define N_METER_DATAFIELD 5 // i, v, p, pf, kwh
+#define BACKUP_FILENAME   "backup_meter.txt"
 
 
 int main()
@@ -32,30 +32,53 @@ int main()
     printf("Reset CS5484 : ret=%d\r\n", ret);
     delay(1000);
 
-    // read the previous history from log file
+    /*
+     *  read the previous history from log file
+     */
     FILE *backup_file;
-    backup_file = fopen("backup_meter.txt", "r+");
-
     char line[1024];
+    double field[N_METER_DATAFIELD];
+    
+    backup_file = fopen(BACKUP_FILENAME, "r");
     fgets(line, 1024, backup_file);
     printf("read file : %s\n", line);
-    double field[N_METER_DATAFIELD];
+    
     for(int i=0; i<N_METER_DATAFIELD; i++){
         char *token;
-        token = strtok(line, ",");
+        char tmp[1024];
+        int len;
+        int len_token;
+       
+	// copy line to tmp buffer. because strtok() change input string
+	memcpy(tmp, line, sizeof(line));
+
+	// extract token 
+        token = strtok(tmp, ",");
+
+	// convert string to floating-point value
 	field[i] = atof(token);
-	printf("%f\n", field[i]);
-	token = strtok(NULL, "\t\n");
+
+	// update line by remove the previous token from the front of line string
+	len = strlen(line);
+	len_token = strlen(token);
+        memcpy(tmp, line+len_token+1, sizeof(line) - sizeof(len_token) - sizeof(char));
+        memcpy(line, tmp, sizeof(tmp));
     }
     fclose(backup_file);
-
     
     uint32_t buf;
     uint32_t i;		// current
     uint32_t v;		// voltage
     uint32_t p;		// power (active power)
     uint32_t pf; 	// power factor
-    double kwh = 0;     // energy consumption
+    double kwh;         // energy consumption
+    
+    // assign backup value to current value
+    i = field[0];
+    v = field[1];
+    p = field[2];
+    pf = field[3];
+    kwh = field[4];
 
     // init GPIO (for testing)
     pinMode(23, OUTPUT);
@@ -67,8 +90,8 @@ int main()
         
 	if(ret == STATUS_OK){
 	    // read all param from conversion result
-            v  = get_voltage_rms(ANALOG_INPUT_CH1, 0);
             i  = get_current_rms(ANALOG_INPUT_CH1, 0);
+            v  = get_voltage_rms(ANALOG_INPUT_CH1, 0);
             p  = get_power_avg(ANALOG_INPUT_CH1, 0);
 	    pf = get_pf(ANALOG_INPUT_CH1, 0);
             kwh = kwh + (double)p/1000/3600;
@@ -76,6 +99,13 @@ int main()
 	    // print result
             printf("I, V, P, PF, KWH :\t\t");
 	    printf("%d\t\t%d\t\t%d\t\t%d\t\t%f\r\n", i, v, p, pf, kwh);
+
+	    // write data to backup file
+            backup_file = fopen(BACKUP_FILENAME, "r+");
+            char str_buf[20];
+	    sprintf(str_buf, "%d,%d,%d,%d,%f\n", i, v, p, pf, kwh);
+	    fputs(str_buf, backup_file);
+	    fclose(backup_file);
         }
         else{
 	    printf("Error from conversion : %d\n", ret);
