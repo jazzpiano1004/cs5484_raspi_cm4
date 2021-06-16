@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <hiredis/hiredis.h>
 
 #define BUS_SPEED 		1000000
 #define SPI_MODE_CS5484		3
@@ -12,15 +13,20 @@
 #define POWER_LINE_FULLSCALE ((long long)CURRENT_FULLSCALE*VOLT_FULLSCALE/1000000)
 
 #define N_METER_DATAFIELD 5 // i, v, p, pf, kwh
-#define BACKUP_FILENAME   "backup_meter.txt"
-
+const char* BACKUP_FILENAME = "backup_meter.txt";
+const char* REDIS_CHANNELNAME_V = "tag:SmartMeter_RPi_CM4.CS5484_Chip.v";
+const char* REDIS_CHANNELNAME_I = "tag:SmartMeter_RPi_CM4.CS5484_Chip.i";
+const char* REDIS_CHANNELNAME_P = "tag:SmartMeter_RPi_CM4.CS5484_Chip.P";
+const char* REDIS_CHANNELNAME_PF = "tag:SmartMeter_RPi_CM4.CS5484_Chip.PF";
+const char* REDIS_CHANNELNAME_E = "tag:SmartMeter_RPi_CM4.CS5484_Chip.energy";
 
 int main()
 {  
-    // initialize wiring-Pi
+    /*
+     *  initialize wiring-Pi and SPI interface
+     *
+     */
     wiringPiSetup();
-
-    // intialize SPI interface
     pinMode(CS_PIN, OUTPUT);
     pullUpDnControl(CS_PIN, PUD_UP);
     digitalWrite(CS_PIN, 1);
@@ -32,8 +38,11 @@ int main()
     printf("Reset CS5484 : ret=%d\r\n", ret);
     delay(1000);
 
+
+
     /*
-     *  read the previous history from log file
+     *  read the previous value from backup file
+     *
      */
     FILE *backup_file;
     char line[1024];
@@ -80,9 +89,43 @@ int main()
     pf = field[3];
     kwh = field[4];
 
-    // init GPIO (for testing)
-    pinMode(23, OUTPUT);
 
+
+    /*
+     * REDIS initialize
+     *
+     */
+    redisContext* c = redisConnect((char*)"www.intelligentscada.com", 6379);
+    if(c->err){
+        redisFree(c);
+        return 0;
+    }
+    printf("connect redis-server success.\n");
+    
+    // REDIS authentication
+    const char* command_auth = "auth ictadmin";
+    redisReply* r = (redisReply*)redisCommand(c, command_auth);
+    if(r == NULL){
+        redisFree(c);
+        return 0;
+    }
+    if(!(r->type == REDIS_REPLY_STATUS && strcasecmp(r->str, "OK") == 0)){
+        printf("Failed to execute command[%s].\n", command_auth);
+        freeReplyObject(r);
+        redisFree(c);
+        return 0;
+    }
+    else{
+        freeReplyObject(r);
+        printf("Succeed to execute command[%s].\n", command_auth);
+    }
+    
+
+
+    /*
+     * main loop
+     *
+     */
     while(1)
     {  
 	// start conversion and wait until completed (polling method)
@@ -106,13 +149,43 @@ int main()
 	    sprintf(str_buf, "%d,%d,%d,%d,%f\n", i, v, p, pf, kwh);
 	    fputs(str_buf, backup_file);
 	    fclose(backup_file);
+
+	    // set tag to REDIS db
+	    char *channel;
+	    char *value;
+	    channel = (char *)REDIS_CHANNELNAME_V;
+	    sprintf(value, "%d", v);
+            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    
+	    channel = (char *)REDIS_CHANNELNAME_I;
+	    sprintf(value, "%d", i);
+            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    
+	    channel = (char *)REDIS_CHANNELNAME_P;
+	    sprintf(value, "%d", p);
+            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    
+	    channel = (char *)REDIS_CHANNELNAME_PF;
+	    sprintf(value, "%d", pf);
+            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    
+	    channel = (char *)REDIS_CHANNELNAME_E;
+	    sprintf(value, "%f", kwh);
+            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+            
+	    /*
+	    if(!(r->type == REDIS_REPLY_STATUS && strcasecmp(r->str, "OK") == 0)){
+                printf("Failed to execute command[%s].\n", command_auth);
+                freeReplyObject(r);
+            }
+	    */
         }
         else{
 	    printf("Error from conversion : %d\n", ret);
 	}
     }
 
-
+    redisFree(c);
     return 0;
 }
 
