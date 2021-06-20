@@ -14,11 +14,11 @@
 
 #define N_METER_DATAFIELD 5 // i, v, p, pf, kwh
 const char* BACKUP_FILENAME = "backup_meter.txt";
-const char* REDIS_CHANNELNAME_V = "tag:SmartMeter_RPi_CM4.CS5484_Chip.v";
-const char* REDIS_CHANNELNAME_I = "tag:SmartMeter_RPi_CM4.CS5484_Chip.i";
-const char* REDIS_CHANNELNAME_P = "tag:SmartMeter_RPi_CM4.CS5484_Chip.P";
-const char* REDIS_CHANNELNAME_PF = "tag:SmartMeter_RPi_CM4.CS5484_Chip.PF";
-const char* REDIS_CHANNELNAME_E = "tag:SmartMeter_RPi_CM4.CS5484_Chip.energy";
+const char* REDIS_CHANNELNAME_V = "tag:meter_1phase.CS5484_Evalboard.v";
+const char* REDIS_CHANNELNAME_I = "tag:meter_1phase.CS5484_Evalboard.i";
+const char* REDIS_CHANNELNAME_P = "tag:meter_1phase.CS5484_Evalboard.P";
+const char* REDIS_CHANNELNAME_PF = "tag:meter_1phase.CS5484_Evalboard.PF";
+const char* REDIS_CHANNELNAME_E = "tag:meter_1phase.CS5484_Evalboard.energy";
 
 int main()
 {  
@@ -95,31 +95,32 @@ int main()
      * REDIS initialize
      *
      */
-    redisContext* c = redisConnect((char*)"www.intelligentscada.com", 6379);
-    if(c->err){
-        redisFree(c);
-        return 0;
-    }
-    printf("connect redis-server success.\n");
+    
+    //redisContext* c = redisConnect((char*)"www.intelligentscada.com", 6379);
+    redisContext* c = redisConnect((char*)"192.168.4.209", 6379);
     
     // REDIS authentication
     const char* command_auth = "auth ictadmin";
     redisReply* r = (redisReply*)redisCommand(c, command_auth);
+
+    if(!(c->err)){
+        printf("redis connect OK\n");
+    }
+    else{
+	printf("redis connect failed\n");
+    }
+
     if(r == NULL){
-        redisFree(c);
         return 0;
     }
     if(!(r->type == REDIS_REPLY_STATUS && strcasecmp(r->str, "OK") == 0)){
         printf("Failed to execute command[%s].\n", command_auth);
-        freeReplyObject(r);
-        redisFree(c);
-        return 0;
     }
     else{
         freeReplyObject(r);
         printf("Succeed to execute command[%s].\n", command_auth);
     }
-    
+
 
 
     /*
@@ -129,7 +130,7 @@ int main()
     while(1)
     {  
 	// start conversion and wait until completed (polling method)
-	ret = start_conversion(CONVERSION_TYPE_SINGLE, 0, 10000);
+	ret = start_conversion(CONVERSION_TYPE_SINGLE, 0, 1000);
         
 	if(ret == STATUS_OK){
 	    // read all param from conversion result
@@ -151,41 +152,41 @@ int main()
 	    fclose(backup_file);
 
 	    // set tag to REDIS db
-	    char *channel;
-	    char *value;
-	    channel = (char *)REDIS_CHANNELNAME_V;
-	    sprintf(value, "%d", v);
-            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    if(!(c->err)){
+	    	char *channel;
+	    	char *value;
+	    	channel = (char *)REDIS_CHANNELNAME_V;
+	    	sprintf(value, "%d", v);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    	
+	    	channel = (char *)REDIS_CHANNELNAME_I;
+	    	sprintf(value, "%d", i);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	    
-	    channel = (char *)REDIS_CHANNELNAME_I;
-	    sprintf(value, "%d", i);
-            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    	channel = (char *)REDIS_CHANNELNAME_P;
+	    	sprintf(value, "%d", p);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	    
-	    channel = (char *)REDIS_CHANNELNAME_P;
-	    sprintf(value, "%d", p);
-            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    	channel = (char *)REDIS_CHANNELNAME_PF;
+	    	sprintf(value, "%d", pf);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	    
-	    channel = (char *)REDIS_CHANNELNAME_PF;
-	    sprintf(value, "%d", pf);
-            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
-	    
-	    channel = (char *)REDIS_CHANNELNAME_E;
-	    sprintf(value, "%f", kwh);
-            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	   	 channel = (char *)REDIS_CHANNELNAME_E;
+	    	sprintf(value, "%f", kwh);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
             
-	    /*
-	    if(!(r->type == REDIS_REPLY_STATUS && strcasecmp(r->str, "OK") == 0)){
-                printf("Failed to execute command[%s].\n", command_auth);
-                freeReplyObject(r);
-            }
-	    */
+	    	if(!(r->type == REDIS_REPLY_STATUS && strcasecmp(r->str, "OK") == 0)){
+                    printf("Failed to execute set command");
+                    freeReplyObject(r);
+            	}
+	    }
         }
         else{
 	    printf("Error from conversion : %d\n", ret);
 	}
     }
 
-    redisFree(c);
+    //redisFree(c);
     return 0;
 }
 
