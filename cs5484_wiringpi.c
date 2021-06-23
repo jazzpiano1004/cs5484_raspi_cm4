@@ -188,6 +188,7 @@ uint32_t get_voltage_rms(uint8_t input_channel, uint8_t csum_en)
 
     page_select(16, csum_en);
     reg_read(&v, addr, csum_en);
+    v  = CalFullScale(438000,0x999999,(uint32_t)v);
 
     return v;
 }
@@ -203,7 +204,8 @@ uint32_t get_current_rms(uint8_t input_channel, uint8_t csum_en)
 
     page_select(16, csum_en);
     reg_read(&i, addr, csum_en);
-
+    i  = CalFullScale(150000,0x999999,(uint32_t)i);
+    
     return i;
 }
 
@@ -218,6 +220,8 @@ uint32_t get_power_avg(uint8_t input_channel, uint8_t csum_en)
 
     page_select(16, csum_en);
     reg_read(&p, addr, csum_en);
+    p  = convert3byteto4byte(p);
+    p  = CalPow(p);
 
     return p;
 }
@@ -233,6 +237,31 @@ uint32_t get_pf(uint8_t input_channel, uint8_t csum_en)
 
     page_select(16, csum_en);
     reg_read(&pf, addr, csum_en);
+    pf = convert3byteto4byte(pf);
+    pf = CalPF(pf);
 
     return pf;
+}
+
+int CalFullScale(uint32_t fullscale,uint32_t full_reg, uint32_t raw)
+{
+    return (((uint64_t)fullscale*raw)/full_reg);
+}
+
+long convert3byteto4byte(unsigned long raw)
+{
+    if(raw&0x800000)
+	return (long)(raw-0x1000000);
+    else
+	return (long)(raw);
+}
+
+int CalPow(int raw)
+{
+    return (((int)(raw))*(long long)(POWER_LINE_FULLSCALE))/(0x7FFFFF*0.36);
+}
+
+int CalPF (int raw )
+{
+    return ((uint64_t)abs(raw)*10000)/0x7FFFFF;
 }

@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <wiringPiSPI.h>
 #include <wiringPi.h>
 
@@ -20,6 +21,9 @@
 #define ANALOG_INPUT_CH1 1
 #define ANALOG_INPUT_CH2 2
 
+#define CURRENT_FULLSCALE 150000*25
+#define VOLT_FULLSCALE    438000
+#define POWER_LINE_FULLSCALE ((long long)CURRENT_FULLSCALE*VOLT_FULLSCALE/1000000)
 
 uint8_t reg_write(uint32_t data, uint8_t addr, uint8_t csum_en);
 uint8_t reg_read(uint32_t *data, uint8_t addr, uint8_t csum_en);
@@ -34,6 +38,9 @@ uint32_t get_current_rms(uint8_t input_channel, uint8_t csum_en);
 uint32_t get_power_avg(uint8_t input_channel, uint8_t csum_en);
 uint32_t get_pf(uint8_t input_channel, uint8_t csum_en);
 
-
+int CalFullScale(uint32_t fullscale,uint32_t full_reg, uint32_t raw);
+long convert3byteto4byte(unsigned long raw);
+int CalPow(int raw);
+int CalPF (int raw);
 
 #endif
