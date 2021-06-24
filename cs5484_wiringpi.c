@@ -177,68 +177,70 @@ uint32_t get_current_peak(uint8_t input_channel, uint8_t csum_en)
     return i;
 }
 
-uint32_t get_voltage_rms(uint8_t input_channel, uint8_t csum_en)
+int get_voltage_rms(uint8_t input_channel, uint8_t csum_en)
 {
     uint8_t addr;
-    uint32_t v;
+    uint32_t raw;
+    int v;
 
     if(input_channel == ANALOG_INPUT_CH1)   	addr = 7;
     else if(input_channel == ANALOG_INPUT_CH2)	addr = 13;
     else return STATUS_FAIL;
 
     page_select(16, csum_en);
-    reg_read(&v, addr, csum_en);
-    v  = CalFullScale(438000,0x999999,(uint32_t)v);
+    reg_read(&raw, addr, csum_en);
+    v  = CalFullScale(438000,0x999999,(uint32_t)raw);
 
     return v;
 }
 
-uint32_t get_current_rms(uint8_t input_channel, uint8_t csum_en)
+int get_current_rms(uint8_t input_channel, uint8_t csum_en)
 {
     uint8_t addr;
-    uint32_t i;
+    uint32_t raw;
+    int i;
 
     if(input_channel == ANALOG_INPUT_CH1)   	addr = 6;
     else if(input_channel == ANALOG_INPUT_CH2)	addr = 12;
     else return STATUS_FAIL;
 
     page_select(16, csum_en);
-    reg_read(&i, addr, csum_en);
-    i  = CalFullScale(150000,0x999999,(uint32_t)i);
+    reg_read(&raw, addr, csum_en);
+    i  = CalFullScale(150000,0x999999,(uint32_t)raw);
     
     return i;
 }
 
-uint32_t get_power_avg(uint8_t input_channel, uint8_t csum_en)
+int get_power_avg(uint8_t input_channel, uint8_t csum_en)
 {
     uint8_t addr;
-    uint32_t p;
+    uint32_t raw;
+    int p;
 
     if(input_channel == ANALOG_INPUT_CH1)   	addr = 5;
     else if(input_channel == ANALOG_INPUT_CH2)	addr = 11;
     else return STATUS_FAIL;
 
     page_select(16, csum_en);
-    reg_read(&p, addr, csum_en);
-    p  = convert3byteto4byte(p);
-    p  = CalPow(p);
+    reg_read(&raw, addr, csum_en);
+    p  = CalPow(convert3byteto4byte(raw));
 
     return p;
 }
 
-uint32_t get_pf(uint8_t input_channel, uint8_t csum_en)
+int get_pf(uint8_t input_channel, uint8_t csum_en)
 { 
     uint8_t addr;
-    uint32_t pf;
+    uint32_t raw;
+    int pf;
 
     if(input_channel == ANALOG_INPUT_CH1)   	addr = 21;
     else if(input_channel == ANALOG_INPUT_CH2)	addr = 25;
     else return STATUS_FAIL;
 
     page_select(16, csum_en);
-    reg_read(&pf, addr, csum_en);
-    pf = convert3byteto4byte(pf);
-    pf = CalPF(pf);
+    reg_read(&raw, addr, csum_en);
+    pf = CalPF(convert3byteto4byte(raw));
 
     return pf;
 }
