@@ -78,10 +78,10 @@ int main()
     fclose(backup_file);
     
     uint32_t buf;
-    uint32_t i;		// current
-    uint32_t v;		// voltage
-    uint32_t p;		// power (active power)
-    uint32_t pf; 	// power factor
+    int i;		// current
+    int v;		// voltage
+    int p;		// power (active power)
+    int pf; 	        // power factor
     double kwh;         // energy consumption
     
     // assign backup value to current value
@@ -147,14 +147,15 @@ int main()
 	    // print result
             printf("I, V, P, PF, KWH :\t\t");
 	    printf("%d\t\t%d\t\t%d\t\t%d\t\t%f\r\n", i, v, p, pf, kwh);
-
+            
+	    
 	    // write data to backup file
             backup_file = fopen(BACKUP_FILENAME, "r+");
             char str_buf[20];
 	    sprintf(str_buf, "%d,%d,%d,%d,%f\n", i, v, p, pf, kwh);
 	    fputs(str_buf, backup_file);
 	    fclose(backup_file);
-
+            
 	    // set tag to REDIS db
 	    if(!(c->err)){
 	    	char *channel;
