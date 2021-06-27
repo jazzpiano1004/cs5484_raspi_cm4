@@ -131,9 +131,13 @@ int main()
      */
     while(1)
     {  
-	// start conversion and wait until completed (polling method)
-	ret = start_conversion(CONVERSION_TYPE_SINGLE, 0, 2000);
-        
+	/*
+	 *  Start conversion of cs5484 
+	 *  and wait until sampling is ready (polling method)
+	 *
+	 */
+	ret = start_conversion(CONVERSION_TYPE_SINGLE, 0, 1000);
+
 	if(ret == STATUS_OK){
 	    // read all param from conversion result
             i  = get_current_rms(ANALOG_INPUT_CH1, 0);
@@ -147,48 +151,60 @@ int main()
 	    // print result
             printf("I, V, P, PF, KWH :\t\t");
 	    printf("%d\t\t%d\t\t%d\t\t%d\t\t%f\r\n", i, v, p, pf, kwh);
-            
-	    
-	    // write data to backup file
-            backup_file = fopen(BACKUP_FILENAME, "r+");
-            char str_buf[20];
-	    sprintf(str_buf, "%d,%d,%d,%d,%f\n", i, v, p, pf, kwh);
-	    fputs(str_buf, backup_file);
-	    fclose(backup_file);
-            
-	    // set tag to REDIS db
-	    if(!(c->err)){
-	    	char *channel;
-	    	char *value;
-	    	channel = (char *)REDIS_CHANNELNAME_V;
-	    	sprintf(value, "%.2f", (float)v/1000);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
-	    	
-	    	channel = (char *)REDIS_CHANNELNAME_I;
-	    	sprintf(value, "%d", i);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
-	    
-	    	channel = (char *)REDIS_CHANNELNAME_P;
-	    	sprintf(value, "%d", p);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
-	    
-	    	channel = (char *)REDIS_CHANNELNAME_PF;
-	    	sprintf(value, "%d", pf);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
-	    
-	   	 channel = (char *)REDIS_CHANNELNAME_E;
-	    	sprintf(value, "%f", kwh);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
-            
-	    	if(!(r->type == REDIS_REPLY_STATUS && strcasecmp(r->str, "OK") == 0)){
-                    printf("Failed to execute set command");
-                    freeReplyObject(r);
-            	}
-	    }
         }
         else{
 	    printf("Error from conversion : %d\n", ret);
 	}
+
+
+
+	/*
+	 *  Write data to backup file
+	 *
+	 */
+        backup_file = fopen(BACKUP_FILENAME, "r+");
+        char str_buf[20];
+	sprintf(str_buf, "%d,%d,%d,%d,%f\n", i, v, p, pf, kwh);
+	fputs(str_buf, backup_file);
+	fclose(backup_file);
+
+
+
+	/*
+	 *  Connect to REDIS and Set value with a CS5484's sampling
+	 *
+	 */
+        c = redisConnect((char*)"192.168.4.209", 6379);
+        r = (redisReply*)redisCommand(c, command_auth);
+
+	if(!(c->err) && !((r->type == REDIS_REPLY_STATUS) && (strcasecmp(r->str, "OK") == 0))){
+	    char *channel;
+	    char *value;
+	    channel = (char *)REDIS_CHANNELNAME_V;
+	    sprintf(value, "%.2f", (float)v/1000);
+            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    
+	    channel = (char *)REDIS_CHANNELNAME_I;
+	    sprintf(value, "%d", i);
+            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	   
+	    channel = (char *)REDIS_CHANNELNAME_P;
+	    sprintf(value, "%d", p);
+            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    
+	    channel = (char *)REDIS_CHANNELNAME_PF;
+	    sprintf(value, "%d", pf);
+            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    
+	    channel = (char *)REDIS_CHANNELNAME_E;
+	    sprintf(value, "%f", kwh);
+            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+            
+	    if(!(r->type == REDIS_REPLY_STATUS && strcasecmp(r->str, "OK") == 0)){
+                printf("Failed to execute set command");
+                freeReplyObject(r);
+            }
+        }
     }
 
     //redisFree(c);
