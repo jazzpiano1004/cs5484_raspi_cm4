@@ -128,9 +128,6 @@ uint8_t start_conversion(uint8_t conversion_type, uint8_t csum_en, int timeout)
 		reg_write(0x800000, 23, 0);
 		ready = 1;		
 	    }
-	    else{
-		timeout_cnt--;
-	    }
 	}
 	else{
 	    timeout_cnt--;
