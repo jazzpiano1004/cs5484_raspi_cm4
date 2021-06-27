@@ -136,7 +136,7 @@ int main()
 	 *  and wait until sampling is ready (polling method)
 	 *
 	 */
-	ret = start_conversion(CONVERSION_TYPE_SINGLE, 0, 1000);
+	ret = start_conversion(CONVERSION_TYPE_SINGLE, 0, 2000);
 
 	if(ret == STATUS_OK){
 	    // read all param from conversion result
@@ -175,36 +175,43 @@ int main()
 	 *
 	 */
         c = redisConnect((char*)"192.168.4.209", 6379);
-        r = (redisReply*)redisCommand(c, command_auth);
-
-	if(!(c->err) && !((r->type == REDIS_REPLY_STATUS) && (strcasecmp(r->str, "OK") == 0))){
-	    char *channel;
-	    char *value;
-	    channel = (char *)REDIS_CHANNELNAME_V;
-	    sprintf(value, "%.2f", (float)v/1000);
-            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	if(!(c->err)){
+            r = (redisReply*)redisCommand(c, command_auth);
+	    if((r->type == REDIS_REPLY_STATUS) && (strcasecmp(r->str, "OK") == 0)){
+	        char *channel;
+	    	char *value;
+	    	channel = (char *)REDIS_CHANNELNAME_V;
+	    	sprintf(value, "%.2f", (float)v/1000);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	    
-	    channel = (char *)REDIS_CHANNELNAME_I;
-	    sprintf(value, "%d", i);
-            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    	channel = (char *)REDIS_CHANNELNAME_I;
+	    	sprintf(value, "%d", i);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	   
-	    channel = (char *)REDIS_CHANNELNAME_P;
-	    sprintf(value, "%d", p);
-            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    	channel = (char *)REDIS_CHANNELNAME_P;
+	    	sprintf(value, "%d", p);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	    
-	    channel = (char *)REDIS_CHANNELNAME_PF;
-	    sprintf(value, "%d", pf);
-            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	        channel = (char *)REDIS_CHANNELNAME_PF;
+	    	sprintf(value, "%d", pf);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	    
-	    channel = (char *)REDIS_CHANNELNAME_E;
-	    sprintf(value, "%f", kwh);
-            r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    	channel = (char *)REDIS_CHANNELNAME_E;
+	    	sprintf(value, "%f", kwh);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
             
-	    if(!(r->type == REDIS_REPLY_STATUS && strcasecmp(r->str, "OK") == 0)){
-                printf("Failed to execute set command");
-                freeReplyObject(r);
-            }
+	    	if(!(r->type == REDIS_REPLY_STATUS && strcasecmp(r->str, "OK") == 0)){
+                    printf("Failed to execute set command");
+                    freeReplyObject(r);
+            	}
+	    }
+	    else{
+		printf("Cannot auth to redis\n");
+	    }
         }
+	else{
+            printf("Cannot connect to redis server\n");
+	}
     }
 
     //redisFree(c);
