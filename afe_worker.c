@@ -51,31 +51,36 @@ int main()
     double field[N_METER_DATAFIELD];
     
     backup_file = fopen(BACKUP_FILENAME, "r");
-    fgets(line, 1024, backup_file);
-    printf("read file : %s\n", line);
-    
-    for(int i=0; i<N_METER_DATAFIELD; i++){
-        char *token;
-        char tmp[1024];
-        int len;
-        int len_token;
-       
-	// copy line to tmp buffer. because strtok() change input string
-	memcpy(tmp, line, sizeof(line));
-
-	// extract token 
-        token = strtok(tmp, ",");
-
-	// convert string to floating-point value
-	field[i] = atof(token);
-
-	// update line by remove the previous token from the front of line string
-	len = strlen(line);
-	len_token = strlen(token);
-        memcpy(tmp, line+len_token+1, sizeof(line) - sizeof(len_token) - sizeof(char));
-        memcpy(line, tmp, sizeof(tmp));
+    if(backup_file == NULL){
+        printf("backup file does not exist, exist program\n");
+	return 0;
     }
-    fclose(backup_file);
+    else{
+        fgets(line, 1024, backup_file);
+        printf("read file : %s\n", line);
+    	for(int i=0; i<N_METER_DATAFIELD; i++){
+            char *token;
+            char tmp[1024];
+            int len;
+            int len_token;
+       
+	    // copy line to tmp buffer. because strtok() change input string
+	    memcpy(tmp, line, sizeof(line));
+
+	    // extract token 
+            token = strtok(tmp, ",");
+
+	    // convert string to floating-point value
+	    field[i] = atof(token);
+
+	    // update line by remove the previous token from the front of line string
+	    len = strlen(line);
+	    len_token = strlen(token);
+            memcpy(tmp, line + len_token + 1, sizeof(line) - sizeof(len_token) - sizeof(char));
+            memcpy(line, tmp, sizeof(tmp));
+        }
+        fclose(backup_file);
+    }
     
     uint32_t buf;
     int i;		// current
@@ -113,13 +118,11 @@ int main()
     }
 
     if(r == NULL){
-        return 0;
     }
     if(!(r->type == REDIS_REPLY_STATUS && strcasecmp(r->str, "OK") == 0)){
         printf("Failed to execute command[%s].\n", command_auth);
     }
     else{
-        freeReplyObject(r);
         printf("Succeed to execute command[%s].\n", command_auth);
     }
 
@@ -136,7 +139,7 @@ int main()
 	 *  and wait until sampling is ready (polling method)
 	 *
 	 */
-	ret = start_conversion(CONVERSION_TYPE_SINGLE, 0, 2000);
+	ret = start_conversion(CONVERSION_TYPE_SINGLE, 0, 1000);
 
 	if(ret == STATUS_OK){
 	    // read all param from conversion result
@@ -163,10 +166,12 @@ int main()
 	 *
 	 */
         backup_file = fopen(BACKUP_FILENAME, "r+");
-        char str_buf[20];
-	sprintf(str_buf, "%d,%d,%d,%d,%f\n", i, v, p, pf, kwh);
-	fputs(str_buf, backup_file);
-	fclose(backup_file);
+	if(backup_file != NULL){
+            char str_buf[50];
+	    sprintf(str_buf, "%d,%d,%d,%d,%f\n", i, v, p, pf, kwh);
+	    fputs(str_buf, backup_file);
+	    fclose(backup_file);
+	}
 
 
 
@@ -174,36 +179,39 @@ int main()
 	 *  Connect to REDIS and Set value with a CS5484's sampling
 	 *
 	 */
+        redisFree(c);
         c = redisConnect((char*)"192.168.4.209", 6379);
 	if(!(c->err)){
+	    freeReplyObject(r);
             r = (redisReply*)redisCommand(c, command_auth);
 	    if((r->type == REDIS_REPLY_STATUS) && (strcasecmp(r->str, "OK") == 0)){
 	        char *channel;
 	    	char *value;
+
 	    	channel = (char *)REDIS_CHANNELNAME_V;
 	    	sprintf(value, "%.2f", (float)v/1000);
+		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	    
 	    	channel = (char *)REDIS_CHANNELNAME_I;
 	    	sprintf(value, "%d", i);
+		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	   
 	    	channel = (char *)REDIS_CHANNELNAME_P;
 	    	sprintf(value, "%d", p);
+		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	    
 	        channel = (char *)REDIS_CHANNELNAME_PF;
 	    	sprintf(value, "%d", pf);
+		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	    
 	    	channel = (char *)REDIS_CHANNELNAME_E;
 	    	sprintf(value, "%f", kwh);
+		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
-            
-	    	if(!(r->type == REDIS_REPLY_STATUS && strcasecmp(r->str, "OK") == 0)){
-                    printf("Failed to execute set command");
-                    freeReplyObject(r);
-            	}
 	    }
 	    else{
 		printf("Cannot auth to redis\n");
