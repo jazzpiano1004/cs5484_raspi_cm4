@@ -103,7 +103,6 @@ int main()
      *
      */
     
-    //redisContext* c = redisConnect((char*)"www.intelligentscada.com", 6379);
     redisContext* c = redisConnect((char*)"192.168.4.209", 6379);
     
     // REDIS authentication
