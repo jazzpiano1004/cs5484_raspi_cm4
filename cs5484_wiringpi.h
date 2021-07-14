@@ -9,7 +9,7 @@
 #include <wiringPi.h>
 
 #define SPI_CHANNEL 	0
-#define CS_PIN 		5
+#define CS_PIN 		6
 
 #define STATUS_OK	0
 #define STATUS_FAIL 	1

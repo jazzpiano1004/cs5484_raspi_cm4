@@ -124,6 +124,8 @@ uint8_t start_conversion(uint8_t conversion_type, uint8_t csum_en, int timeout)
             // data ready and conversion ready flag in status0
 	    if((status0 & 0xC00000) == 0xC00000)
 	    {   
+	        printf("read status0 : %x\r\n", status0);
+		printf("conversion data ready!\n");
                 page_select(0, 0);
 		reg_write(0x800000, 23, 0);
 		ready = 1;		
