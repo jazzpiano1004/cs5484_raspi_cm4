@@ -1,9 +1,10 @@
 #include "cs5484_wiringpi.h"
+#include "rtc.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <hiredis/hiredis.h>
+//#include <hiredis/hiredis.h>
 
 #define BUS_SPEED 		1000000
 #define SPI_MODE_CS5484		3
@@ -102,7 +103,7 @@ int main()
      * REDIS initialize
      *
      */
-    
+    /*
     redisContext* c = redisConnect((char*)"192.168.4.209", 6379);
     
     // REDIS authentication
@@ -124,7 +125,7 @@ int main()
     else{
         printf("Succeed to execute command[%s].\n", command_auth);
     }
-
+    */
 
 
     /*
@@ -142,12 +143,15 @@ int main()
 
 	if(ret == STATUS_OK){
 	    // read all param from conversion result
-            i  = get_current_rms(ANALOG_INPUT_CH1, 0);
-            v  = get_voltage_rms(ANALOG_INPUT_CH1, 0);
-            p  = get_power_avg(ANALOG_INPUT_CH1, 0);
-	    pf = get_pf(ANALOG_INPUT_CH1, 0);
-            // CT of remoted evalboard is in inverse direction right now \_--_/
-	    p = -p;
+            i  = get_current_rms(ANALOG_INPUT_CH2, 0);
+            v  = get_voltage_rms(ANALOG_INPUT_CH2, 0);
+            p  = get_power_avg(ANALOG_INPUT_CH2, 0);
+	    pf = get_pf(ANALOG_INPUT_CH2, 0);
+	   
+	     
+	    // offset and gain correction (should be include in calibration process)
+	    v = v - 100*1000;
+	    p = p + 133;
             kwh = kwh + (double)p/1000.0/3600.0;
 	    
 	    // print result
@@ -161,13 +165,22 @@ int main()
 
 
 	/*
+	 *  Read timestamp
+	 *
+	 */
+        char timestamp[30];
+	rtc_getTime(timestamp);
+        printf("timestamp=%s\n", timestamp);
+
+
+	/*
 	 *  Write data to backup file
 	 *
 	 */
         backup_file = fopen(BACKUP_FILENAME, "r+");
 	if(backup_file != NULL){
-            char str_buf[50];
-	    sprintf(str_buf, "%d,%d,%d,%d,%f\n", i, v, p, pf, kwh);
+            char str_buf[100];
+	    sprintf(str_buf, "%d,%d,%d,%d,%f,timestamp=%s\n", i, v, p, pf, kwh, timestamp);
 	    fputs(str_buf, backup_file);
 	    fclose(backup_file);
 	}
@@ -178,6 +191,7 @@ int main()
 	 *  Connect to REDIS and Set value with a CS5484's sampling
 	 *
 	 */
+	/*
         redisFree(c);
         c = redisConnect((char*)"192.168.4.209", 6379);
 	if(!(c->err)){
@@ -219,6 +233,7 @@ int main()
 	else{
             printf("Cannot connect to redis server\n");
 	}
+	*/
     }
 
     //redisFree(c);
