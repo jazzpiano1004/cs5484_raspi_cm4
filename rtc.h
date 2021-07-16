@@ -1,5 +1,5 @@
-#ifndef CS5484_WIRINGPI_H
-#define CS5484_WIRINGPI_H
+#ifndef RTC_H
+#define RTC_H
 
 /*
  * Include for Real-time Clock
