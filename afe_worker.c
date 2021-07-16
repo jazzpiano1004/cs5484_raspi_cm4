@@ -13,13 +13,17 @@
 #define VOLT_FULLSCALE    438000
 #define POWER_LINE_FULLSCALE ((long long)CURRENT_FULLSCALE*VOLT_FULLSCALE/1000000)
 
-#define N_METER_DATAFIELD 5 // i, v, p, pf, kwh
+#define N_METER_DATAFIELD       8 // i, v, p, q, s, pf, kwh, kVArh
+
 const char* BACKUP_FILENAME = "backup_meter.txt";
 const char* REDIS_CHANNELNAME_V = "tag:meter_1phase.CS5484_Evalboard.v";
 const char* REDIS_CHANNELNAME_I = "tag:meter_1phase.CS5484_Evalboard.i";
 const char* REDIS_CHANNELNAME_P = "tag:meter_1phase.CS5484_Evalboard.P";
+const char* REDIS_CHANNELNAME_Q = "tag:meter_1phase.CS5484_Evalboard.Q";
+const char* REDIS_CHANNELNAME_S = "tag:meter_1phase.CS5484_Evalboard.S";
 const char* REDIS_CHANNELNAME_PF = "tag:meter_1phase.CS5484_Evalboard.PF";
-const char* REDIS_CHANNELNAME_E = "tag:meter_1phase.CS5484_Evalboard.energy";
+const char* REDIS_CHANNELNAME_KWH = "tag:meter_1phase.CS5484_Evalboard.energy";
+const char* REDIS_CHANNELNAME_KVARH = "tag:meter_1phase.CS5484_Evalboard.energy_kvarh";
 
 
 
@@ -86,17 +90,23 @@ int main()
     uint32_t buf;
     int i;		// current
     int v;		// voltage
-    int p;		// power (active power)
+    int p;		// active power
+    int q;              // reactive power
+    int s;              // apparent power
     int pf; 	        // power factor
-    double kwh;         // energy consumption
+    double kwh;         // energy consumption (real)
+    double kVArh;       // energy consumption (complex)
     
     // assign backup value to current value
     i = field[0];
     v = field[1];
     p = field[2];
-    pf = field[3];
-    kwh = field[4];
-
+    q = field[3];
+    s = field[4];
+    pf = field[5];
+    kwh = field[6];
+    kVArh = field[7];
+    
 
 
     /*
@@ -145,18 +155,23 @@ int main()
 	    // read all param from conversion result
             i  = get_current_rms(ANALOG_INPUT_CH2, 0);
             v  = get_voltage_rms(ANALOG_INPUT_CH2, 0);
-            p  = get_power_avg(ANALOG_INPUT_CH2, 0);
+            p  = get_act_power_avg(ANALOG_INPUT_CH2, 0);
+            q  = get_react_power_avg(ANALOG_INPUT_CH2, 0);
+            s  = get_apparent_power_avg(ANALOG_INPUT_CH2, 0);
 	    pf = get_pf(ANALOG_INPUT_CH2, 0);
 	   
 	     
 	    // offset and gain correction (should be include in calibration process)
 	    v = v - 100*1000;
 	    p = p + 133;
+            
+	    // calculate energy
             kwh = kwh + (double)p/1000.0/3600.0;
+	    kVArh = kVArh + (double)s/1000.0/3600.0;
 	    
 	    // print result
-            printf("I, V, P, PF, KWH :\t\t");
-	    printf("%d\t\t%d\t\t%d\t\t%d\t\t%f\r\n", i, v, p, pf, kwh);
+            printf("I, V, P, Q, S, PF, KWH :\t");
+	    printf("%d\t%d\t%d\t%d\t%d\t%d\t%f\r\n", i, v, p, q, s, pf, kwh);
         }
         else{
 	    printf("Error from conversion : %d\n", ret);
@@ -180,7 +195,7 @@ int main()
         backup_file = fopen(BACKUP_FILENAME, "r+");
 	if(backup_file != NULL){
             char str_buf[100];
-	    sprintf(str_buf, "%d,%d,%d,%d,%f,timestamp=%s\n", i, v, p, pf, kwh, timestamp);
+	    sprintf(str_buf, "%d,%d,%d,%d,%d,%d,%f,%f,timestamp=%s\n", i, v, p, q, s, pf, kwh, kVArh, timestamp);
 	    fputs(str_buf, backup_file);
 	    fclose(backup_file);
 	}
@@ -216,13 +231,28 @@ int main()
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	    
-	        channel = (char *)REDIS_CHANNELNAME_PF;
+	    	channel = (char *)REDIS_CHANNELNAME_Q;
+	    	sprintf(value, "%d", q);
+		freeReplyObject(r);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+
+	    	channel = (char *)REDIS_CHANNELNAME_S;
+	    	sprintf(value, "%d", s);
+		freeReplyObject(r);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	        
+		channel = (char *)REDIS_CHANNELNAME_PF;
 	    	sprintf(value, "%d", pf);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	    
-	    	channel = (char *)REDIS_CHANNELNAME_E;
+	    	channel = (char *)REDIS_CHANNELNAME_KWH;
 	    	sprintf(value, "%f", kwh);
+		freeReplyObject(r);
+            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+	    	
+		channel = (char *)REDIS_CHANNELNAME_KVARH;
+	    	sprintf(value, "%f", kVArh);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
 	    }
