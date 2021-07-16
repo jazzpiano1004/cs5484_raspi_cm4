@@ -210,7 +210,7 @@ int get_current_rms(uint8_t input_channel, uint8_t csum_en)
     return i;
 }
 
-int get_power_avg(uint8_t input_channel, uint8_t csum_en)
+int get_act_power_avg(uint8_t input_channel, uint8_t csum_en)
 {
     uint8_t addr;
     uint32_t raw;
@@ -225,6 +225,40 @@ int get_power_avg(uint8_t input_channel, uint8_t csum_en)
     p  = CalPow(convert3byteto4byte(raw));
 
     return p;
+}
+
+int get_react_power_avg(uint8_t input_channel, uint8_t csum_en)
+{
+    uint8_t addr;
+    uint32_t raw;
+    int q;
+
+    if(input_channel == ANALOG_INPUT_CH1)   	addr = 14;
+    else if(input_channel == ANALOG_INPUT_CH2)	addr = 16;
+    else return STATUS_FAIL;
+
+    page_select(16, csum_en);
+    reg_read(&raw, addr, csum_en);
+    q = CalPow(convert3byteto4byte(raw));
+
+    return q;
+}
+
+int get_apparent_power_avg(uint8_t input_channel, uint8_t csum_en)
+{
+    uint8_t addr;
+    uint32_t raw;
+    int s;
+
+    if(input_channel == ANALOG_INPUT_CH1)   	addr = 20;
+    else if(input_channel == ANALOG_INPUT_CH2)	addr = 24;
+    else return STATUS_FAIL;
+
+    page_select(16, csum_en);
+    reg_read(&raw, addr, csum_en);
+    s = CalPow(convert3byteto4byte(raw));
+
+    return s;
 }
 
 int get_pf(uint8_t input_channel, uint8_t csum_en)
