@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <hiredis/hiredis.h>
+#include <hiredis/hiredis.h>
 
 #define BUS_SPEED 		1000000
 #define SPI_MODE_CS5484		3
@@ -16,14 +16,18 @@
 #define N_METER_DATAFIELD       8 // i, v, p, q, s, pf, kwh, kVArh
 
 const char* BACKUP_FILENAME = "backup_meter.txt";
-const char* REDIS_CHANNELNAME_V = "tag:meter_1phase.CS5484_Evalboard.v";
-const char* REDIS_CHANNELNAME_I = "tag:meter_1phase.CS5484_Evalboard.i";
-const char* REDIS_CHANNELNAME_P = "tag:meter_1phase.CS5484_Evalboard.P";
-const char* REDIS_CHANNELNAME_Q = "tag:meter_1phase.CS5484_Evalboard.Q";
-const char* REDIS_CHANNELNAME_S = "tag:meter_1phase.CS5484_Evalboard.S";
-const char* REDIS_CHANNELNAME_PF = "tag:meter_1phase.CS5484_Evalboard.PF";
-const char* REDIS_CHANNELNAME_KWH = "tag:meter_1phase.CS5484_Evalboard.energy";
-const char* REDIS_CHANNELNAME_KVARH = "tag:meter_1phase.CS5484_Evalboard.energy_kvarh";
+const char* REDIS_CHANNELNAME_V = "meter_1phase.CS5484_Evalboard.v";
+const char* REDIS_CHANNELNAME_I = "meter_1phase.CS5484_Evalboard.i";
+const char* REDIS_CHANNELNAME_P = "meter_1phase.CS5484_Evalboard.P";
+const char* REDIS_CHANNELNAME_Q = "meter_1phase.CS5484_Evalboard.Q";
+const char* REDIS_CHANNELNAME_S = "meter_1phase.CS5484_Evalboard.S";
+const char* REDIS_CHANNELNAME_PF = "meter_1phase.CS5484_Evalboard.PF";
+const char* REDIS_CHANNELNAME_KWH = "meter_1phase.CS5484_Evalboard.energy";
+const char* REDIS_CHANNELNAME_KVARH = "meter_1phase.CS5484_Evalboard.energy_kvarh";
+
+#define REDIS_URL	"www.ismartmeter.net"
+#define REDIS_PORT	16379
+
 
 
 
@@ -113,8 +117,7 @@ int main()
      * REDIS initialize
      *
      */
-    /*
-    redisContext* c = redisConnect((char*)"192.168.4.209", 6379);
+    redisContext* c = redisConnect((char*)REDIS_URL, REDIS_PORT);
     
     // REDIS authentication
     const char* command_auth = "auth ictadmin";
@@ -135,7 +138,7 @@ int main()
     else{
         printf("Succeed to execute command[%s].\n", command_auth);
     }
-    */
+    
 
 
     /*
@@ -159,7 +162,6 @@ int main()
             q  = get_react_power_avg(ANALOG_INPUT_CH2, 0);
             s  = get_apparent_power_avg(ANALOG_INPUT_CH2, 0);
 	    pf = get_pf(ANALOG_INPUT_CH2, 0);
-	   
 	     
 	    // offset and gain correction (should be include in calibration process)
 	    v = v - 100*1000;
@@ -206,55 +208,63 @@ int main()
 	 *  Connect to REDIS and Set value with a CS5484's sampling
 	 *
 	 */
-	/*
+	
         redisFree(c);
-        c = redisConnect((char*)"192.168.4.209", 6379);
+        c = redisConnect((char*)REDIS_URL, REDIS_PORT);
 	if(!(c->err)){
 	    freeReplyObject(r);
             r = (redisReply*)redisCommand(c, command_auth);
 	    if((r->type == REDIS_REPLY_STATUS) && (strcasecmp(r->str, "OK") == 0)){
 	        char *channel;
 	    	char *value;
-
+                
 	    	channel = (char *)REDIS_CHANNELNAME_V;
 	    	sprintf(value, "%.2f", (float)v/1000);
 		freeReplyObject(r);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+            	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
+										     , channel, timestamp);
 	    
 	    	channel = (char *)REDIS_CHANNELNAME_I;
 	    	sprintf(value, "%d", i);
 		freeReplyObject(r);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+            	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
+										     , channel, timestamp);
 	   
 	    	channel = (char *)REDIS_CHANNELNAME_P;
 	    	sprintf(value, "%d", p);
 		freeReplyObject(r);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
-	    
+            	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
+										     , channel, timestamp);
+	   
 	    	channel = (char *)REDIS_CHANNELNAME_Q;
 	    	sprintf(value, "%d", q);
 		freeReplyObject(r);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+            	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
+										     , channel, timestamp);
 
 	    	channel = (char *)REDIS_CHANNELNAME_S;
 	    	sprintf(value, "%d", s);
 		freeReplyObject(r);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+            	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
+										     , channel, timestamp);
 	        
 		channel = (char *)REDIS_CHANNELNAME_PF;
 	    	sprintf(value, "%d", pf);
 		freeReplyObject(r);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+            	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
+										     , channel, timestamp);
 	    
 	    	channel = (char *)REDIS_CHANNELNAME_KWH;
 	    	sprintf(value, "%f", kwh);
 		freeReplyObject(r);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+            	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
+										     , channel, timestamp);
 	    	
 		channel = (char *)REDIS_CHANNELNAME_KVARH;
 	    	sprintf(value, "%f", kVArh);
 		freeReplyObject(r);
-            	r = (redisReply*)redisCommand(c, "%s %s %s", "set", channel, value);
+            	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
+										     , channel, timestamp);
 	    }
 	    else{
 		printf("Cannot auth to redis\n");
@@ -263,7 +273,7 @@ int main()
 	else{
             printf("Cannot connect to redis server\n");
 	}
-	*/
+	
     }
 
     //redisFree(c);
