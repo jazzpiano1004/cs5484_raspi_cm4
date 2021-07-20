@@ -8,22 +8,35 @@
 #include <wiringPiSPI.h>
 #include <wiringPi.h>
 
-#define SPI_CHANNEL 	0
-#define CS_PIN 		6
+/*
+ * SPI Bus Parameters
+ *
+ */
+#define BUS_SPEED 	        1000000
+#define SPI_CHANNEL 		0
+#define CS_PIN 			8
+#define MISO_PIN        	9
+#define MOSI_PIN        	10
+#define SCK_PIN         	11
+#define BUS_SPEED 	        1000000
+#define SPI_MODE_CS5484		3
 
-#define STATUS_OK	0
-#define STATUS_FAIL 	1
-#define STATUS_TIMEOUT 	2
-
+/*
+ * CS5484 Parameters
+ *
+ */
+#define CHECKSUM_DISABLE        0
+#define CHECKSUM_ENABLE         1
+#define STATUS_OK		0
+#define STATUS_FAIL 		1
+#define STATUS_TIMEOUT 		2
 #define CONVERSION_TYPE_SINGLE 	   1
 #define CONVERSION_TYPE_CONTINUOUS 2
-
-#define ANALOG_INPUT_CH1 1
-#define ANALOG_INPUT_CH2 2
-
-#define CURRENT_FULLSCALE 150000*25
-#define VOLT_FULLSCALE    438000
-#define POWER_LINE_FULLSCALE ((long long)CURRENT_FULLSCALE*VOLT_FULLSCALE/1000000)
+#define ANALOG_INPUT_CH1 	1
+#define ANALOG_INPUT_CH2 	2
+#define CURRENT_FULLSCALE 	150000*25
+#define VOLT_FULLSCALE    	438000
+#define POWER_LINE_FULLSCALE	((long long)CURRENT_FULLSCALE*VOLT_FULLSCALE/1000000)
 
 uint8_t reg_write(uint32_t data, uint8_t addr, uint8_t csum_en);
 uint8_t reg_read(uint32_t *data, uint8_t addr, uint8_t csum_en);
