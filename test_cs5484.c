@@ -49,7 +49,7 @@ int main()
      */
     ret = reset(CHECKSUM_DISABLE);
     printf("Reset CS5484 : ret=%d\r\n", ret);
-    delay(10000);
+    delay(5000);
     
     ret = page_select(0, CHECKSUM_DISABLE);
     printf("change page, ret=%d\n", ret);
