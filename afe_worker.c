@@ -156,12 +156,12 @@ int main()
 
 	if(ret == STATUS_OK){
 	    // read all param from conversion result
-            i  = get_current_rms(ANALOG_INPUT_CH2, 0);
-            v  = get_voltage_rms(ANALOG_INPUT_CH2, 0);
-            p  = get_act_power_avg(ANALOG_INPUT_CH2, 0);
-            q  = get_react_power_avg(ANALOG_INPUT_CH2, 0);
-            s  = get_apparent_power_avg(ANALOG_INPUT_CH2, 0);
-	    pf = get_pf(ANALOG_INPUT_CH2, 0);
+            i  = get_current_rms(ANALOG_INPUT_CH1, 0);
+            v  = get_voltage_rms(ANALOG_INPUT_CH1, 0);
+            p  = get_act_power_avg(ANALOG_INPUT_CH1, 0);
+            q  = get_react_power_avg(ANALOG_INPUT_CH1, 0);
+            s  = get_apparent_power_avg(ANALOG_INPUT_CH1, 0);
+	    pf = get_pf(ANALOG_INPUT_CH1, 0);
 	     
 	    // offset and gain correction (should be include in calibration process)
 	    v = v - 100*1000;
