@@ -176,28 +176,49 @@ uint32_t get_current_peak(uint8_t input_channel, uint8_t csum_en)
     return i;
 }
 
-int get_voltage_rms(uint8_t input_channel, uint8_t csum_en)
+double get_voltage_rms(uint8_t input_channel, uint8_t csum_en)
 {
+    /*
+     * Section : Read raw data from register.
+     *
+     */
     uint8_t addr;
     uint32_t raw;
-    int v;
 
     if(input_channel == ANALOG_INPUT_CH1)   	addr = 7;
     else if(input_channel == ANALOG_INPUT_CH2)	addr = 13;
     else return STATUS_FAIL;
-
+    
     page_select(16, csum_en);
     reg_read(&raw, addr, csum_en);
-    v  = CalFullScale(438000,0x999999,(uint32_t)raw);
 
-    return v;
+
+
+    /*
+     * Section : Convert raw data to actual voltage
+     *
+     */
+    double vrms;       // voltage at voltage input of CS5484
+    double vrms_line;  // AC Line voltage
+
+    // Calculate rms voltage at input of CS5484
+    //vrms  = CalFullScale(438000,0x999999,(uint32_t)raw);
+    vrms = (double)raw / FULLSCALE_RAWDATA_VOLTAGE * FULLSCALE_INPUT_VOLTAGE / sqrt(2);
+
+    // Calculate AC line voltage
+    vrms_line = vrms * R_DIVIDER_GAIN_INVERSE;
+
+    return vrms_line;
 }
 
-int get_current_rms(uint8_t input_channel, uint8_t csum_en)
+double get_current_rms(uint8_t input_channel, uint8_t csum_en)
 {
+    /*
+     * Section : Read raw data from register.
+     *
+     */
     uint8_t addr;
     uint32_t raw;
-    int i;
 
     if(input_channel == ANALOG_INPUT_CH1)   	addr = 6;
     else if(input_channel == ANALOG_INPUT_CH2)	addr = 12;
@@ -205,16 +226,34 @@ int get_current_rms(uint8_t input_channel, uint8_t csum_en)
 
     page_select(16, csum_en);
     reg_read(&raw, addr, csum_en);
-    i  = CalFullScale(150000,0x999999,(uint32_t)raw);
     
-    return i;
+
+
+    /*
+     * Section : Convert raw data to actual current
+     *
+     */
+    double vrms;       // voltage at current input of CS5484
+    double irms_line;  // AC Line voltage
+    
+    // Calculate rms voltage at input of CS5484
+    //i  = CalFullScale(150000,0x999999,(uint32_t)raw);
+    vrms = (double)raw / FULLSCALE_RAWDATA_CURRENT * FULLSCALE_INPUT_VOLTAGE / sqrt(2);
+    
+    // Calculate Load current
+    irms_line = CT_RATIO * vrms / R_BURDEN;
+
+    return irms_line;
 }
 
-int get_act_power_avg(uint8_t input_channel, uint8_t csum_en)
+double get_act_power_avg(uint8_t input_channel, uint8_t csum_en)
 {
+    /*
+     * Section : Read raw data from register.
+     *
+     */
     uint8_t addr;
     uint32_t raw;
-    int p;
 
     if(input_channel == ANALOG_INPUT_CH1)   	addr = 5;
     else if(input_channel == ANALOG_INPUT_CH2)	addr = 11;
@@ -222,7 +261,27 @@ int get_act_power_avg(uint8_t input_channel, uint8_t csum_en)
 
     page_select(16, csum_en);
     reg_read(&raw, addr, csum_en);
-    p  = CalPow(convert3byteto4byte(raw));
+    
+
+
+    /*
+     * Section : Convert raw data to actual power
+     *
+     */
+    double p;             // power
+    long raw_4byte;   // buffer for 2s complement conversion
+    
+    // Detect sign bit of 2s compliment value
+    //p  = CalPow(convert3byteto4byte(raw));
+    if(raw & 0x800000){
+        raw_4byte = (long)(raw - 0x1000000);	
+    }
+    else{
+	raw_4byte = (long)raw;
+    }
+
+    // Calculate power at output terminal
+    p = (double)raw_4byte / FULLSCALE_RAWDATA_POWER * FULLSCALE_OUTPUT_POWER;
 
     return p;
 }
@@ -261,11 +320,14 @@ int get_apparent_power_avg(uint8_t input_channel, uint8_t csum_en)
     return s;
 }
 
-int get_pf(uint8_t input_channel, uint8_t csum_en)
+double get_pf(uint8_t input_channel, uint8_t csum_en)
 { 
+    /*
+     * Section : Read raw data from register.
+     *
+     */
     uint8_t addr;
     uint32_t raw;
-    int pf;
 
     if(input_channel == ANALOG_INPUT_CH1)   	addr = 21;
     else if(input_channel == ANALOG_INPUT_CH2)	addr = 25;
@@ -273,7 +335,27 @@ int get_pf(uint8_t input_channel, uint8_t csum_en)
 
     page_select(16, csum_en);
     reg_read(&raw, addr, csum_en);
+
+
+
+    /*
+     * Section : Convert raw data to actual power factor
+     *
+     */
+    double pf;       // power
+    long raw_4byte;
+
+    // Detect sign bit of 2s compliment value
     pf = CalPF(convert3byteto4byte(raw));
+    if(raw & 0x800000){
+        raw_4byte = (long)(raw - 0x1000000);	
+    }
+    else{
+	raw_4byte = (long)raw;
+    }
+    
+    // calculate power factor at output terminal
+    pf = ((double)(raw_4byte) / 0x7FFFFF) * 100;
 
     return pf;
 }
