@@ -9,12 +9,7 @@
 #define BUS_SPEED 		1000000
 #define SPI_MODE_CS5484		3
 
-#define CURRENT_FULLSCALE 150000*25
-#define VOLT_FULLSCALE    438000
-#define POWER_LINE_FULLSCALE ((long long)CURRENT_FULLSCALE*VOLT_FULLSCALE/1000000)
-
 #define N_METER_DATAFIELD       8 // i, v, p, q, s, pf, kwh, kVArh
-
 const char* BACKUP_FILENAME = "backup_meter.txt";
 const char* REDIS_CHANNELNAME_V = "meter_1phase.CS5484_Evalboard.v";
 const char* REDIS_CHANNELNAME_I = "meter_1phase.CS5484_Evalboard.i";
@@ -92,12 +87,12 @@ int main()
     }
     
     uint32_t buf;
-    int i;		// current
-    int v;		// voltage
-    int p;		// active power
+    float i;		// current
+    float v;		// voltage
+    float p;		// active power
     int q;              // reactive power
     int s;              // apparent power
-    int pf; 	        // power factor
+    double pf; 	        // power factor
     double kwh;         // energy consumption (real)
     double kVArh;       // energy consumption (complex)
     
@@ -156,16 +151,12 @@ int main()
 
 	if(ret == STATUS_OK){
 	    // read all param from conversion result
-            i  = get_current_rms(ANALOG_INPUT_CH1, 0);
-            v  = get_voltage_rms(ANALOG_INPUT_CH1, 0);
-            p  = get_act_power_avg(ANALOG_INPUT_CH1, 0);
-            q  = get_react_power_avg(ANALOG_INPUT_CH1, 0);
-            s  = get_apparent_power_avg(ANALOG_INPUT_CH1, 0);
-	    pf = get_pf(ANALOG_INPUT_CH1, 0);
-	     
-	    // offset and gain correction (should be include in calibration process)
-	    v = v - 100*1000;
-	    p = p + 133;
+            i  = get_current_rms(ANALOG_INPUT_CH2, 0);
+            v  = get_voltage_rms(ANALOG_INPUT_CH2, 0);
+            p  = get_act_power_avg(ANALOG_INPUT_CH2, 0);
+            q  = get_react_power_avg(ANALOG_INPUT_CH2, 0);
+            s  = get_apparent_power_avg(ANALOG_INPUT_CH2, 0);
+	    pf = get_pf(ANALOG_INPUT_CH2, 0);
             
 	    // calculate energy
             kwh = kwh + (double)p/1000.0/3600.0;
@@ -173,7 +164,7 @@ int main()
 	    
 	    // print result
             printf("I, V, P, Q, S, PF, KWH :\t");
-	    printf("%d\t%d\t%d\t%d\t%d\t%d\t%f\r\n", i, v, p, q, s, pf, kwh);
+	    printf("%f\t%f\t%f\t%d\t%d\t%f\t%f\r\n", i, v, p, q, s, pf, kwh);
         }
         else{
 	    printf("Error from conversion : %d\n", ret);
@@ -187,7 +178,7 @@ int main()
 	 */
         char timestamp[30];
 	rtc_getTime(timestamp);
-        printf("timestamp=%s\n", timestamp);
+        printf("timestamp=%s", timestamp);
 
 
 	/*
@@ -196,8 +187,8 @@ int main()
 	 */
         backup_file = fopen(BACKUP_FILENAME, "r+");
 	if(backup_file != NULL){
-            char str_buf[100];
-	    sprintf(str_buf, "%d,%d,%d,%d,%d,%d,%f,%f,timestamp=%s\n", i, v, p, q, s, pf, kwh, kVArh, timestamp);
+            char str_buf[200];
+	    sprintf(str_buf, "%.3f,%.3f,%.3f,%d,%d,%.3f,%.3f,%.3f,timestamp=%s\n", i, v, p, q, s, pf, kwh, kVArh, timestamp);
 	    fputs(str_buf, backup_file);
 	    fclose(backup_file);
 	}
@@ -208,7 +199,6 @@ int main()
 	 *  Connect to REDIS and Set value with a CS5484's sampling
 	 *
 	 */
-	
         redisFree(c);
         c = redisConnect((char*)REDIS_URL, REDIS_PORT);
 	if(!(c->err)){
@@ -217,25 +207,25 @@ int main()
 	    if((r->type == REDIS_REPLY_STATUS) && (strcasecmp(r->str, "OK") == 0)){
 	        char *channel;
 	    	char *value;
-                
+                printf("Set tag via Redis...\n\n"); 
+	        
 	    	channel = (char *)REDIS_CHANNELNAME_V;
-	    	sprintf(value, "%.2f", (float)v/1000);
+	    	sprintf(value, "%f", v);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
 										     , channel, timestamp);
-	    
 	    	channel = (char *)REDIS_CHANNELNAME_I;
-	    	sprintf(value, "%d", i);
+	    	sprintf(value, "%f", i);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
 										     , channel, timestamp);
 	   
 	    	channel = (char *)REDIS_CHANNELNAME_P;
-	    	sprintf(value, "%d", p);
+	    	sprintf(value, "%f", p);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
 										     , channel, timestamp);
-	   
+	        
 	    	channel = (char *)REDIS_CHANNELNAME_Q;
 	    	sprintf(value, "%d", q);
 		freeReplyObject(r);
@@ -249,11 +239,11 @@ int main()
 										     , channel, timestamp);
 	        
 		channel = (char *)REDIS_CHANNELNAME_PF;
-	    	sprintf(value, "%d", pf);
+	    	sprintf(value, "%f", pf);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
 										     , channel, timestamp);
-	    
+                
 	    	channel = (char *)REDIS_CHANNELNAME_KWH;
 	    	sprintf(value, "%f", kwh);
 		freeReplyObject(r);
@@ -273,7 +263,6 @@ int main()
 	else{
             printf("Cannot connect to redis server\n");
 	}
-	
     }
 
     //redisFree(c);
