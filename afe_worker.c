@@ -90,9 +90,9 @@ int main()
     float i;		// current
     float v;		// voltage
     float p;		// active power
-    int q;              // reactive power
-    int s;              // apparent power
-    double pf; 	        // power factor
+    float q;              // reactive power
+    float s;              // apparent power
+    float pf; 	        // power factor
     double kwh;         // energy consumption (real)
     double kVArh;       // energy consumption (complex)
     
@@ -147,7 +147,7 @@ int main()
 	 *  and wait until sampling is ready (polling method)
 	 *
 	 */
-	ret = start_conversion(CONVERSION_TYPE_SINGLE, 0, 1000);
+	ret = start_conversion(CONVERSION_TYPE_SINGLE, 0, 3000);
 
 	if(ret == STATUS_OK){
 	    // read all param from conversion result
@@ -164,7 +164,7 @@ int main()
 	    
 	    // print result
             printf("I, V, P, Q, S, PF, KWH :\t");
-	    printf("%f\t%f\t%f\t%d\t%d\t%f\t%f\r\n", i, v, p, q, s, pf, kwh);
+	    printf("%f\t%f\t%f\t%f\t%f\t%f\t%f\r\n", i, v, p, q, s, pf, kwh);
         }
         else{
 	    printf("Error from conversion : %d\n", ret);
@@ -188,7 +188,7 @@ int main()
         backup_file = fopen(BACKUP_FILENAME, "r+");
 	if(backup_file != NULL){
             char str_buf[200];
-	    sprintf(str_buf, "%.3f,%.3f,%.3f,%d,%d,%.3f,%.3f,%.3f,timestamp=%s\n", i, v, p, q, s, pf, kwh, kVArh, timestamp);
+	    sprintf(str_buf, "%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%f,%f,timestamp=%s\n", i, v, p, q, s, pf, kwh, kVArh, timestamp);
 	    fputs(str_buf, backup_file);
 	    fclose(backup_file);
 	}
@@ -210,48 +210,48 @@ int main()
                 printf("Set tag via Redis...\n\n"); 
 	        
 	    	channel = (char *)REDIS_CHANNELNAME_V;
-	    	sprintf(value, "%f", v);
+	    	sprintf(value, "%.2f", v);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
 										     , channel, timestamp);
 	    	channel = (char *)REDIS_CHANNELNAME_I;
-	    	sprintf(value, "%f", i);
+	    	sprintf(value, "%.2f", 1000*i);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
 										     , channel, timestamp);
 	   
 	    	channel = (char *)REDIS_CHANNELNAME_P;
-	    	sprintf(value, "%f", p);
+	    	sprintf(value, "%.2f", p);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
 										     , channel, timestamp);
 	        
 	    	channel = (char *)REDIS_CHANNELNAME_Q;
-	    	sprintf(value, "%d", q);
+	    	sprintf(value, "%.2f", q);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
 										     , channel, timestamp);
 
 	    	channel = (char *)REDIS_CHANNELNAME_S;
-	    	sprintf(value, "%d", s);
+	    	sprintf(value, "%.2f", s);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
 										     , channel, timestamp);
 	        
 		channel = (char *)REDIS_CHANNELNAME_PF;
-	    	sprintf(value, "%f", pf);
+	    	sprintf(value, "%.2f", pf);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
 										     , channel, timestamp);
                 
 	    	channel = (char *)REDIS_CHANNELNAME_KWH;
-	    	sprintf(value, "%f", kwh);
+	    	sprintf(value, "%.5f", kwh);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
 										     , channel, timestamp);
 	    	
 		channel = (char *)REDIS_CHANNELNAME_KVARH;
-	    	sprintf(value, "%f", kVArh);
+	    	sprintf(value, "%.5f", kVArh);
 		freeReplyObject(r);
             	r = (redisReply*)redisCommand(c, "%s tag:%s %s tagtime:%s %s", "mset", channel, value
 										     , channel, timestamp);
@@ -265,7 +265,6 @@ int main()
 	}
     }
 
-    //redisFree(c);
     return 0;
 }
 
