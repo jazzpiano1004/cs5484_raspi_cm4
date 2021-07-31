@@ -68,13 +68,19 @@ uint32_t get_current_peak(uint8_t input_channel, uint8_t csum_en);
 double get_voltage_rms(uint8_t input_channel, uint8_t csum_en);
 double get_current_rms(uint8_t input_channel, uint8_t csum_en);
 double get_act_power_avg(uint8_t input_channel, uint8_t csum_en);
-int get_react_power_avg(uint8_t input_channel, uint8_t csum_en);
-int get_apparent_power_avg(uint8_t input_channel, uint8_t csum_en);
+double get_react_power_avg(uint8_t input_channel, uint8_t csum_en);
+double get_apparent_power_avg(uint8_t input_channel, uint8_t csum_en);
 double get_pf(uint8_t input_channel, uint8_t csum_en);
 
+/*
+ * Function from old version of smartmeter
+ *
+ */
+/*
 int CalFullScale(uint32_t fullscale,uint32_t full_reg, uint32_t raw);
 long convert3byteto4byte(unsigned long raw);
 int CalPow(int raw);
 int CalPF (int raw);
+*/
 
 #endif

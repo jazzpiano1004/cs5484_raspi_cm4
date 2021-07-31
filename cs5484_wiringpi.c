@@ -286,11 +286,14 @@ double get_act_power_avg(uint8_t input_channel, uint8_t csum_en)
     return p;
 }
 
-int get_react_power_avg(uint8_t input_channel, uint8_t csum_en)
+double get_react_power_avg(uint8_t input_channel, uint8_t csum_en)
 {
+    /*
+     * Section : Read raw data from register.
+     *
+     */
     uint8_t addr;
     uint32_t raw;
-    int q;
 
     if(input_channel == ANALOG_INPUT_CH1)   	addr = 14;
     else if(input_channel == ANALOG_INPUT_CH2)	addr = 16;
@@ -298,16 +301,39 @@ int get_react_power_avg(uint8_t input_channel, uint8_t csum_en)
 
     page_select(16, csum_en);
     reg_read(&raw, addr, csum_en);
-    q = CalPow(convert3byteto4byte(raw));
+
+
+
+    /*
+     * Section : Convert raw data to actual power
+     *
+     */
+    double q;         // poweri
+    long raw_4byte;   // buffer for 2s complement conversion
+    
+    // Detect sign bit of 2s compliment value
+    //q = CalPow(convert3byteto4byte(raw));
+    if(raw & 0x800000){
+        raw_4byte = (long)(raw - 0x1000000);	
+    }
+    else{
+	raw_4byte = (long)raw;
+    }
+
+    // Calculate power at output terminal
+    q = (double)raw_4byte / FULLSCALE_RAWDATA_POWER * FULLSCALE_OUTPUT_POWER;
 
     return q;
 }
 
-int get_apparent_power_avg(uint8_t input_channel, uint8_t csum_en)
+double get_apparent_power_avg(uint8_t input_channel, uint8_t csum_en)
 {
+    /*
+     * Section : Read raw data from register.
+     *
+     */
     uint8_t addr;
     uint32_t raw;
-    int s;
 
     if(input_channel == ANALOG_INPUT_CH1)   	addr = 20;
     else if(input_channel == ANALOG_INPUT_CH2)	addr = 24;
@@ -315,7 +341,17 @@ int get_apparent_power_avg(uint8_t input_channel, uint8_t csum_en)
 
     page_select(16, csum_en);
     reg_read(&raw, addr, csum_en);
-    s = CalPow(convert3byteto4byte(raw));
+
+
+
+    /*
+     * Section : Convert raw data to actual power
+     *
+     */
+    double s;
+    //s = CalPow(convert3byteto4byte(raw));
+    // Calculate power at output terminal
+    s = (double)raw / FULLSCALE_RAWDATA_POWER * FULLSCALE_OUTPUT_POWER;
 
     return s;
 }
@@ -346,7 +382,7 @@ double get_pf(uint8_t input_channel, uint8_t csum_en)
     long raw_4byte;
 
     // Detect sign bit of 2s compliment value
-    pf = CalPF(convert3byteto4byte(raw));
+    //pf = CalPF(convert3byteto4byte(raw));
     if(raw & 0x800000){
         raw_4byte = (long)(raw - 0x1000000);	
     }
@@ -360,6 +396,7 @@ double get_pf(uint8_t input_channel, uint8_t csum_en)
     return pf;
 }
 
+/*
 int CalFullScale(uint32_t fullscale,uint32_t full_reg, uint32_t raw)
 {
     return (((uint64_t)fullscale*raw)/full_reg);
@@ -382,3 +419,4 @@ int CalPF (int raw )
 {
     return ((uint64_t)abs(raw)*10000)/0x7FFFFF;
 }
+*/
