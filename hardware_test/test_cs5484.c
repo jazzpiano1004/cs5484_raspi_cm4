@@ -17,6 +17,8 @@
 #define FULLSCALE_OUTPUT_CURRENT         0.250 / sqrt(2) * CT_RATIO / R_BURDEN
 #define FULLSCALE_OUTPUT_POWER           FULLSCALE_OUTPUT_VOLTAGE * FULLSCALE_OUTPUT_VOLTAGE
 
+#define RST_PIN   6
+
 uint32_t get_voltage_raw(uint8_t input_channel, uint8_t csum_en);
 uint32_t get_current_raw(uint8_t input_channel, uint8_t csum_en);
 uint32_t get_power_raw(uint8_t input_channel, uint8_t csum_en);
@@ -60,8 +62,11 @@ int main()
     wiringPiSetupGpio();
     wiringpi_setup = 1;
     pinMode(CS_PIN, OUTPUT);
+    pinMode(RST_PIN, OUTPUT);
     pullUpDnControl(CS_PIN, PUD_OFF);
+    pullUpDnControl(RST_PIN, PUD_UP);
     digitalWrite(CS_PIN, 1);
+    digitalWrite(RST_PIN, 1);
     ret = wiringPiSPISetupMode(SPI_CHANNEL, BUS_SPEED, SPI_MODE_CS5484);
     printf("SPI init result : %d\r\n", ret);
     delay(1000);
@@ -70,6 +75,10 @@ int main()
      * CS5484 : Reset CMD
      *
      */
+    digitalWrite(RST_PIN, 0);
+    delay(100);
+    digitalWrite(RST_PIN, 1);
+    delay(1000);
     ret = reset(CHECKSUM_DISABLE);
     printf("Reset CS5484 : ret=%d\r\n", ret);
     delay(5000);
@@ -125,10 +134,10 @@ int main()
     while(keepRunning){    
         ret = start_conversion(CONVERSION_TYPE_SINGLE, CHECKSUM_DISABLE, 1000);
 	if(ret == STATUS_OK){
-            voltage_raw = get_voltage_raw(ANALOG_INPUT_CH2, CHECKSUM_DISABLE);
-            current_raw = get_current_raw(ANALOG_INPUT_CH2, CHECKSUM_DISABLE);
-            power_raw = get_power_raw(ANALOG_INPUT_CH2, CHECKSUM_DISABLE);
-	    pf_raw = get_pf_raw(ANALOG_INPUT_CH2, CHECKSUM_DISABLE);
+            voltage_raw = get_voltage_raw(ANALOG_INPUT_CH1, CHECKSUM_DISABLE);
+            current_raw = get_current_raw(ANALOG_INPUT_CH1, CHECKSUM_DISABLE);
+            power_raw = get_power_raw(ANALOG_INPUT_CH1, CHECKSUM_DISABLE);
+	    pf_raw = get_pf_raw(ANALOG_INPUT_CH1, CHECKSUM_DISABLE);
             v = get_actual_value_voltage(voltage_raw);
             i = get_actual_value_current(current_raw);
             p = get_actual_value_power(power_raw);
