@@ -15,7 +15,7 @@
  */
 #define BUS_SPEED 	        1000000
 #define SPI_CHANNEL 		0
-#define CS_PIN 			5
+#define CS_PIN 			8
 #define MISO_PIN        	9
 #define MOSI_PIN        	10
 #define SCK_PIN         	11
