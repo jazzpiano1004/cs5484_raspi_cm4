@@ -1,0 +1,15 @@
+#FROM raspbian/stretch
+FROM ubuntu@sha256:30fc21bbbbaab3e05531686ef0b725e1f9e7e08df5d6dd64240d094217f0c7cf
+RUN apt-get update -y && apt-get install -y git build-essential
+
+# Install Hiredis 
+RUN mkdir /build && cd /build/ && git clone https://github.com/redis/hiredis.git && cd /build/hiredis && make . && make install
+RUN apt install libevent-dev -y
+RUN echo include /usr/include > /etc/ld.so.conf.d/measurement_ld.conf
+RUN echo include /usr/lib >> /etc/ld.so.conf.d/measurement_ld.conf
+
+# Install Wiring-Pi
+RUN cd /build/ && git clone https://github.com/WiringPi/WiringPi.git && cd /build/WiringPi/wiringPi && make install
+
+ADD . /smartmeter_raspi
+RUN cd /smartmeter_raspi/afe_worker/ && make
